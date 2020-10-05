@@ -46,7 +46,10 @@ export class Extension {
 						if (
 							message.event === "output" &&
 							"body" in message &&
-							message.body.category === "stdout"
+							(
+								message.body.category === "stdout" ||
+								message.body.category === "stderr"
+							)
 						) {
 							const body = message.body;
 							const output = body.output;
