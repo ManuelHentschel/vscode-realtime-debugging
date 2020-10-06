@@ -40,7 +40,29 @@
 		"url": "https://github.com/hediet/vscode-realtime-debugging/issues"
 	},
 	"main": "./out/extension",
-	"contributes": {},
+	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title": "realtime-debugging",
+			"properties": {
+				"realtime-debugging.highlightLines": {
+					"type": "boolean",
+					"default": true,
+					"description": "Highlight lines that produce debugger output."
+				},
+				"realtime-debugging.logOutput": {
+					"type": "boolean",
+					"default": true,
+					"description": "Log debugger output next to line."
+				},
+				"realtime-debugging.logDAP": {
+					"type": "boolean",
+					"default": true,
+					"description": "Log messages from the debug adapter."
+				}
+			}
+		}
+	},
 	"scripts": {
 		"pub": "vsce publish --yarn",
 		"package": "vsce package --yarn",

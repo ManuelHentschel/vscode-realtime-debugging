@@ -17,14 +17,9 @@ import { LogResultDecorator } from "./LineHistory";
 
 export class Extension {
 	public readonly dispose = Disposable.fn();
-	private readonly log: vscode.OutputChannel | undefined = this.dispose.track(
-		vscode.window.createOutputChannel("debug log")
-	);
-
-	private readonly executionHightlighter = new ExecutionHighlighter();
-	private readonly logResultDecorator = this.dispose.track(
-		new LogResultDecorator()
-	);
+	private readonly log?: vscode.OutputChannel;
+	private readonly executionHightlighter: ExecutionHighlighter;
+	private readonly logResultDecorator: LogResultDecorator;
 
 	constructor() {
 		if (getReloadCount(module) > 0) {
@@ -33,11 +28,22 @@ export class Extension {
 			i.show();
 		}
 
+
+		this.executionHightlighter = new ExecutionHighlighter();
+		this.logResultDecorator = this.dispose.track(
+			new LogResultDecorator()
+		);
+		this.log = this.dispose.track(
+			vscode.window.createOutputChannel("debug log")
+		);
+
 		this.dispose.track(
 			vscode.debug.registerDebugAdapterTrackerFactory("*", {
 				createDebugAdapterTracker: (session) => ({
 					onWillStartSession: () => {
-						this.logResultDecorator.clear();
+						if(this.logResultDecorator){
+							this.logResultDecorator.clear();
+						}
 						if (this.log) {
 							this.log.clear();
 						}
@@ -60,16 +66,21 @@ export class Extension {
 								const line = body.line - 1;
 
 								const pathUri = vscode.Uri.file(path);
+								const config = vscode.workspace.getConfiguration('realtime-debugging');
 
-								this.executionHightlighter.highlight(
-									pathUri,
-									line
-								);
-								this.logResultDecorator.log(
-									pathUri,
-									line,
-									output
-								);
+								if(config.get<boolean>('highlightLines', true)){
+									this.executionHightlighter.highlight(
+										pathUri,
+										line
+									);
+								}
+								if(config.get<boolean>('logOutput', true)){
+									this.logResultDecorator.log(
+										pathUri,
+										line,
+										output
+									);
+								}
 							}
 						}
 
