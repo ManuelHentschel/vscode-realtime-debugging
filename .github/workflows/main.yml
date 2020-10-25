@@ -1,0 +1,18 @@
+name: main
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - uses: lannonbr/vsce-action@master
+        with:
+          args: "package"
+      - name: Identify output file # can be retrieved as steps.filenames.outputs.file_out
+        id: filenames
+        run: echo "::set-output name=file_out::$(ls | grep "^.*\.vsix$" | head -1)"
+      - uses: actions/upload-artifact@v1
+        with:
+          name: ${{ steps.filenames.outputs.file_out }}
+          path: ${{ steps.filenames.outputs.file_out }}
