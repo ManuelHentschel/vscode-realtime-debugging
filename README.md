@@ -1,7 +1,5 @@
 # Real-Time Debugging
 
-[![](https://img.shields.io/twitter/follow/hediet_dev.svg?style=social)](https://twitter.com/intent/follow?screen_name=hediet_dev)
-
 ## Features
 
 -   Highlights statements that write to stdout when they are executed.
