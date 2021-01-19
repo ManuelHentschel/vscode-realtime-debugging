@@ -3,7 +3,7 @@
 	"private": true,
 	"displayName": "Real-Time Debugging",
 	"description": "This extension visualizes how your code is being executed.",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"license": "GPL-3.0",
 	"publisher": "hediet",
 	"author": {
@@ -25,7 +25,7 @@
 	"readme": "./README.md",
 	"icon": "docs/logo.png",
 	"engines": {
-		"vscode": "^1.44.0"
+		"vscode": "^1.51.0"
 	},
 	"categories": [
 		"Other"
@@ -45,15 +45,25 @@
 			"type": "object",
 			"title": "realtime-debugging",
 			"properties": {
+				"realtime-debugging.addTimestamp": {
+					"type": "boolean",
+					"default": true,
+					"description": "Add timestamp to name of sources."
+				},
 				"realtime-debugging.highlightLines": {
 					"type": "boolean",
 					"default": true,
 					"description": "Highlight lines that produce debugger output."
 				},
-				"realtime-debugging.logOutput": {
+				"realtime-debugging.annotateOutput": {
 					"type": "boolean",
 					"default": true,
-					"description": "Log debugger output next to line."
+					"description": "Show debugger output next to the line that produced it."
+				},
+				"realtime-debugging.hoverOutput": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show debugger output when hovering over the line that produced it."
 				},
 				"realtime-debugging.logDAP": {
 					"type": "boolean",
@@ -72,12 +82,9 @@
 	},
 	"devDependencies": {
 		"@types/node": "^13.13.5",
-		"@types/vscode": "1.44.0",
+		"@types/vscode": "^1.51.0",
 		"tslint": "^6.1.2",
 		"typescript": "^3.8.3"
 	},
-	"dependencies": {
-		"@hediet/node-reload": "^0.7.3",
-		"@hediet/std": "0.6.0"
-	}
+	"dependencies": {}
 }

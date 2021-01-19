@@ -1,21 +1,14 @@
-import {
-	Uri,
-	window,
-	TextEditor,
-	Range,
-	TextEditorDecorationType,
-} from "vscode";
+import * as vscode from "vscode";
 
 export class ExecutionHighlighter {
 	private readonly highlighter = new Highlighter();
 
-	highlight(uri: Uri, line: number): void {
-		for (const editor of window.visibleTextEditors) {
-			if (editor.document.uri.toString() !== uri.toString()) {
-				continue;
+	highlight(uri: vscode.Uri, line: number): void {
+		for (const editor of vscode.window.visibleTextEditors) {
+			if (editor.document.uri.toString() === uri.toString()) {
+				const range = editor.document.lineAt(line).range;
+				this.highlighter.highlight(editor, range);
 			}
-			const range = editor.document.lineAt(line).range;
-			this.highlighter.highlight(editor, range);
 		}
 	}
 }
@@ -23,7 +16,7 @@ export class ExecutionHighlighter {
 export class Highlighter {
 	private lastHighlight: Highlight | undefined;
 
-	highlight(editor: TextEditor, range: Range): void {
+	highlight(editor: vscode.TextEditor, range: vscode.Range): void {
 		if (this.lastHighlight) {
 			this.lastHighlight.deprecate();
 		}
@@ -32,14 +25,14 @@ export class Highlighter {
 }
 
 class Highlight {
-	private type: TextEditorDecorationType | undefined;
+	private type: vscode.TextEditorDecorationType | undefined;
 
 	constructor(
-		private readonly textEditor: TextEditor,
-		private readonly range: Range,
+		private readonly textEditor: vscode.TextEditor,
+		private readonly range: vscode.Range,
 		onHide: () => void
 	) {
-		this.type = window.createTextEditorDecorationType({
+		this.type = vscode.window.createTextEditorDecorationType({
 			backgroundColor: "orange",
 		});
 		textEditor.setDecorations(this.type, [range]);
@@ -53,7 +46,7 @@ class Highlight {
 	deprecate() {
 		if (this.type) {
 			this.type.dispose();
-			this.type = window.createTextEditorDecorationType({
+			this.type = vscode.window.createTextEditorDecorationType({
 				backgroundColor: "yellow",
 			});
 			this.textEditor.setDecorations(this.type, [this.range]);

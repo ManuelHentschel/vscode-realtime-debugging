@@ -1,61 +1,51 @@
-import { Disposable } from "@hediet/std/disposable";
-import {
-	Uri,
-	window,
-	workspace,
-	MarkdownString,
-	DecorationOptions,
-	TextDocument,
-	TextDocumentChangeEvent,
-	TextDocumentContentChangeEvent,
-} from "vscode";
+import * as vscode from "vscode";
 
 export class LogResultDecorator {
-	public readonly dispose = Disposable.fn();
-
 	private readonly map = new Map<
 		string,
-		{ uri: Uri; lines: Map<number, LineHistory> }
+		{ uri: vscode.Uri; lines: Map<number, LineHistory> }
 	>();
-	private readonly decorationType = this.dispose.track(
-		window.createTextEditorDecorationType({
-			after: {
-				color: "gray",
-				margin: "20px",
-			},
+	private readonly decorationType = vscode.window.createTextEditorDecorationType({
+		after: {
+			color: "gray",
+			margin: "20px",
+		},
+	})
+
+	private readonly annotateOutput: boolean = true;
+	private readonly hoverOutput: boolean = true;
+
+	constructor(annotateOutput: boolean = true, hoverOutput: boolean = true) {
+		this.annotateOutput = annotateOutput;
+		this.hoverOutput = hoverOutput;
+
+		vscode.workspace.onDidChangeTextDocument((evt) => {
+			this.updateLineNumbers(evt);
+			this.updateDecorations();
 		})
-	);
-
-	constructor() {
-		this.dispose.track([
-			workspace.onDidChangeTextDocument((evt) => {
-				this.updateLineNumbers(evt);
-				this.updateDecorations();
-			}),
-			workspace.onDidCloseTextDocument((doc) => {
-				this.map.delete(doc.uri.toString());
-			}),
-			workspace.onDidSaveTextDocument((doc) => {
-				// remove annotations on save. could be disabled/removed.
-				this.map.delete(doc.uri.toString());
-				this.updateDecorations();
-			}),
-			workspace.onDidOpenTextDocument((doc) => {
+		vscode.workspace.onDidCloseTextDocument((doc) => {
+			this.map.delete(doc.uri.toString());
+		})
+		vscode.workspace.onDidSaveTextDocument((doc) => {
+			// remove annotations on save. could be disabled/removed.
+			this.map.delete(doc.uri.toString());
+			this.updateDecorations();
+		})
+		vscode.workspace.onDidOpenTextDocument((doc) => {
+			// convert line numbers to offsets
+			this.addOffsets(doc);
+			this.updateDecorations();
+		})
+		vscode.window.onDidChangeActiveTextEditor((doc) => {
+			if (doc) {
 				// convert line numbers to offsets
-				this.addOffsets(doc);
+				this.addOffsets(doc.document);
 				this.updateDecorations();
-			}),
-			window.onDidChangeActiveTextEditor((doc) => {
-				if (doc) {
-					// convert line numbers to offsets
-					this.addOffsets(doc.document);
-					this.updateDecorations();
-				}
-			}),
-		]);
-	}
+			}
+		})
+	};
 
-	public log(uri: Uri, line: number, output: string): void {
+	public log(uri: vscode.Uri, line: number, output: string): void {
 		let entry = this.map.get(uri.toString());
 		if (!entry) {
 			entry = { uri, lines: new Map() };
@@ -79,7 +69,7 @@ export class LogResultDecorator {
 	}
 
 	private updateDecorations() {
-		for (const editor of window.visibleTextEditors) {
+		for (const editor of vscode.window.visibleTextEditors) {
 			const entry = this.map.get(editor.document.uri.toString());
 			if (!entry) {
 				editor.setDecorations(this.decorationType, []);
@@ -90,33 +80,35 @@ export class LogResultDecorator {
 				this.decorationType,
 				[...entry.lines.values()].map((history) => {
 					const range = editor.document.lineAt(history.line).range;
-					const hoverMessage = new MarkdownString();
+					const hoverMessage = new vscode.MarkdownString();
 					hoverMessage.isTrusted = true;
-					for (const h of history.history.slice().reverse()) {
-						hoverMessage.appendMarkdown(`* ${h}`);
+					hoverMessage.appendMarkdown('**Recent Output:**\n');
+					for (let h of history.history.slice().reverse()) {
+						h = h.trim();
+						hoverMessage.appendMarkdown('\n---\n```\n' + h + '\n```');
 					}
-					/*const params = encodeURIComponent(
-						JSON.stringify({ stepId: o.id } as RunCmdIdArgs)
-					);*/
-					/*hoverMessage.appendMarkdown(
-						`* [Run Step '${o.id}'](command:${runCmdId}?${params})`
-					);*/
 
-					return {
-						range,
-						renderOptions: {
+					const ret: vscode.DecorationOptions = {
+						range: range
+					}
+					if(this.hoverOutput){
+						ret.hoverMessage = hoverMessage;
+					}
+					if(this.annotateOutput){
+						ret.renderOptions = {
 							after: {
-								contentText: history.history[0],
-							},
-						},
-						hoverMessage,
-					} as DecorationOptions;
+								contentText: history.history[0].trim(),
+							}
+						};
+					}
+
+					return ret;
 				})
 			);
 		}
 	}
 
-	private updateLineNumbers(evt: TextDocumentChangeEvent) {
+	private updateLineNumbers(evt: vscode.TextDocumentChangeEvent) {
 		if (evt.contentChanges.length === 0) {
 			// nothing changed. Use this occasion to add/update offsets
 			this.addOffsets(evt.document);
@@ -133,7 +125,7 @@ export class LogResultDecorator {
 			}
 		}
 	}
-	private addOffsets(doc: TextDocument) {
+	private addOffsets(doc: vscode.TextDocument) {
 		// method to update/add offsets to the lineHistory items
 		// is done on document open, since TextDocumentchangeEvents do not contain the necessary info to do this after the change
 		const entry = this.map.get(doc.uri.toString());
@@ -147,14 +139,14 @@ export class LogResultDecorator {
 }
 
 class LineHistory {
-	constructor(public readonly uri: Uri, public line: number) {}
+	constructor(public readonly uri: vscode.Uri, public line: number) {}
 	public readonly history: string[] = [];
 	public offset?: number; // is the offset of the last character on the line
 }
 
 function updateLineLocation(
 	lineHistory: LineHistory,
-	evt: TextDocumentChangeEvent
+	evt: vscode.TextDocumentChangeEvent
 ) {
 	// handle a TextDocumentChange event
 	// handles each change in the event separately
@@ -170,8 +162,8 @@ function updateLineLocation(
 }
 function updateLineLocationByChange(
 	lineHistory: LineHistory,
-	change: TextDocumentContentChangeEvent,
-	doc: TextDocument
+	change: vscode.TextDocumentContentChangeEvent,
+	doc: vscode.TextDocument
 ) {
 	const start = change.rangeOffset;
 	const end0 = start + change.rangeLength; // end of the range before the change
